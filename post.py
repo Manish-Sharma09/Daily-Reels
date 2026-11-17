@@ -77,5 +77,10 @@ if __name__ == "__main__":
         d = due()
         if d:
             print(d["tag"], d["asset"], d["id"])
+    elif sys.argv[1] == "check":
+        tok = os.environ["IG_TOKEN"]
+        api = f"https://graph.facebook.com/{VER}" if tok.startswith("EAA") else f"https://graph.instagram.com/{VER}"
+        r = http("GET", f"{api}/{IG_USER_ID}" if tok.startswith("EAA") else f"{api}/me", {"fields": "username", "access_token": tok})
+        print("Instagram login OK: @" + r.get("username", "?"))
     elif sys.argv[1] == "post":
         post(sys.argv[2], sys.argv[3])
