@@ -1,0 +1,37 @@
+name: Post daily reel
+on:
+  schedule:
+    - cron: "30 11 * * *"   # 17:00 IST
+    - cron: "30 12 * * *"   # 18:00 IST backup, in case GitHub skipped the first run
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency:
+  group: post-reel
+  cancel-in-progress: false
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find the reel due now
+        id: next
+        run: echo "due=$(python3 post.py next)" >> "$GITHUB_OUTPUT"
+      - name: Download and post it
+        if: steps.next.outputs.due != ''
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -- ${{ steps.next.outputs.due }}
+          gh release download "$1" --pattern "$2" --dir /tmp/reel
+          python3 post.py post "/tmp/reel/$2" "$3"
+      - name: Save what was posted
+        if: steps.next.outputs.due != ''
+        run: |
+          git config user.name "daily-reels-bot"
+          git config user.email "daily-reels-bot@users.noreply.github.com"
+          git add posted.json
+          git commit -m "Posted ${{ steps.next.outputs.due }}" || exit 0
+          git push
